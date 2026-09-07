@@ -1,4 +1,4 @@
-# ParkSpace — Non Functional Requirements
+# ParkSpace: Non Functional Requirements
 
 > Derived from `00_SPEC_KERNEL.md`. Where this document and the kernel disagree, the
 > kernel wins. Document number 09.
