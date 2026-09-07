@@ -1,0 +1,424 @@
+@import 'tailwindcss';
+
+/* ==========================================================================
+   ParkSpace design tokens
+
+   One palette, defined once, used everywhere. The accent is a deep teal rather
+   than the blue every marketplace reaches for, and the secondary is a warm amber
+   that carries the "your space is earning" idea without shouting.
+
+   Dark mode is a token swap, not a second stylesheet.
+   ========================================================================== */
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, 'Noto Sans', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  --color-ink-50: #f6f7f8;
+  --color-ink-100: #eceef1;
+  --color-ink-200: #d5dae0;
+  --color-ink-300: #b0b9c4;
+  --color-ink-400: #8492a2;
+  --color-ink-500: #667587;
+  --color-ink-600: #515e6f;
+  --color-ink-700: #424c5a;
+  --color-ink-800: #39414c;
+  --color-ink-900: #1f242b;
+  --color-ink-950: #12161a;
+
+  --color-teal-50: #eefbf7;
+  --color-teal-100: #d4f5eb;
+  --color-teal-200: #ace9d9;
+  --color-teal-300: #76d7c1;
+  --color-teal-400: #41bda4;
+  --color-teal-500: #21a189;
+  --color-teal-600: #14816f;
+  --color-teal-700: #13675a;
+  --color-teal-800: #14524a;
+  --color-teal-900: #14453e;
+  --color-teal-950: #042722;
+
+  --color-amber-400: #f5b544;
+  --color-amber-500: #e89c1f;
+  --color-amber-600: #cc7d13;
+
+  --color-rose-400: #f36f6f;
+  --color-rose-500: #e23d3d;
+  --color-rose-600: #c42828;
+}
+
+:root {
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: var(--color-ink-50);
+  --surface-inverse: var(--color-ink-900);
+  --border: var(--color-ink-200);
+  --border-strong: var(--color-ink-300);
+  --text: var(--color-ink-900);
+  --text-muted: var(--color-ink-500);
+  --text-inverse: #ffffff;
+  --accent: var(--color-teal-600);
+  --accent-hover: var(--color-teal-700);
+  --accent-soft: var(--color-teal-50);
+  --accent-text: var(--color-teal-700);
+  --ring: var(--color-teal-500);
+  --shadow-card: 0 1px 2px rgb(18 22 26 / 0.04), 0 4px 12px rgb(18 22 26 / 0.06);
+  --shadow-raised: 0 2px 4px rgb(18 22 26 / 0.05), 0 12px 28px rgb(18 22 26 / 0.10);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --surface: var(--color-ink-950);
+    --surface-raised: var(--color-ink-900);
+    --surface-sunken: #0c0f12;
+    --surface-inverse: var(--color-ink-50);
+    --border: #2a3138;
+    --border-strong: #3a434d;
+    --text: var(--color-ink-50);
+    --text-muted: var(--color-ink-400);
+    --text-inverse: var(--color-ink-950);
+    --accent: var(--color-teal-400);
+    --accent-hover: var(--color-teal-300);
+    --accent-soft: rgb(33 161 137 / 0.14);
+    --accent-text: var(--color-teal-300);
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);
+    --shadow-raised: 0 2px 4px rgb(0 0 0 / 0.5), 0 12px 28px rgb(0 0 0 / 0.45);
+  }
+}
+
+[data-theme='dark'] {
+  --surface: var(--color-ink-950);
+  --surface-raised: var(--color-ink-900);
+  --surface-sunken: #0c0f12;
+  --surface-inverse: var(--color-ink-50);
+  --border: #2a3138;
+  --border-strong: #3a434d;
+  --text: var(--color-ink-50);
+  --text-muted: var(--color-ink-400);
+  --text-inverse: var(--color-ink-950);
+  --accent: var(--color-teal-400);
+  --accent-hover: var(--color-teal-300);
+  --accent-soft: rgb(33 161 137 / 0.14);
+  --accent-text: var(--color-teal-300);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);
+  --shadow-raised: 0 2px 4px rgb(0 0 0 / 0.5), 0 12px 28px rgb(0 0 0 / 0.45);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Focus ring. Visible, high contrast, and never removed: the map interface is
+   already hard to use with a keyboard and hiding focus would make it impossible. */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+/* --------------------------------------------------------------------------
+   Component primitives
+   -------------------------------------------------------------------------- */
+
+.ps-card {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 0.875rem;
+  box-shadow: var(--shadow-card);
+}
+
+.ps-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.625rem;
+  padding: 0.625rem 0.8125rem;
+  font-size: 0.9375rem;
+  color: var(--text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.ps-input::placeholder {
+  color: var(--text-muted);
+}
+
+.ps-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.ps-input[aria-invalid='true'] {
+  border-color: var(--color-rose-500);
+}
+
+.ps-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.375rem;
+}
+
+.ps-hint {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin-top: 0.375rem;
+}
+
+.ps-error {
+  font-size: 0.8125rem;
+  color: var(--color-rose-500);
+  margin-top: 0.375rem;
+}
+
+.ps-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.625rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  padding: 0.625rem 1.125rem;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s, transform 0.05s;
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.ps-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.ps-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ps-btn-primary {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+[data-theme='dark'] .ps-btn-primary,
+:root:not([data-theme='light']) .ps-btn-primary {
+  color: var(--color-ink-950);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .ps-btn-primary {
+    color: #ffffff;
+  }
+}
+
+.ps-btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.ps-btn-secondary {
+  background: var(--surface-raised);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.ps-btn-secondary:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+
+.ps-btn-ghost {
+  background: transparent;
+  color: var(--text);
+}
+
+.ps-btn-ghost:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+
+.ps-btn-danger {
+  background: var(--color-rose-500);
+  color: #ffffff;
+}
+
+.ps-btn-danger:hover:not(:disabled) {
+  background: var(--color-rose-600);
+}
+
+.ps-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  padding: 0.1875rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ps-badge-accent {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.ps-badge-neutral {
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.ps-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-sunken) 25%,
+    var(--border) 37%,
+    var(--surface-sunken) 63%
+  );
+  background-size: 400% 100%;
+  animation: ps-shimmer 1.4s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+@keyframes ps-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+/* Screen reader only, but focusable for the skip link. */
+.sr-only-focusable:not(:focus):not(:focus-within) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* --------------------------------------------------------------------------
+   MapLibre overrides
+
+   The default control chrome is bright white and fights a dark theme, so it is
+   retinted with our tokens. Attribution styling is adjusted but never hidden.
+   -------------------------------------------------------------------------- */
+
+.maplibregl-ctrl-group {
+  background: var(--surface-raised) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+.maplibregl-ctrl-group button {
+  background: transparent !important;
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--border) !important;
+}
+
+.maplibregl-ctrl-attrib {
+  background: color-mix(in srgb, var(--surface-raised) 88%, transparent) !important;
+  color: var(--text-muted) !important;
+  font-size: 10px !important;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: var(--text-muted) !important;
+}
+
+.maplibregl-popup-content {
+  background: var(--surface-raised) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0.75rem !important;
+  box-shadow: var(--shadow-raised) !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: var(--surface-raised) !important;
+  border-bottom-color: var(--surface-raised) !important;
+}
+
+.maplibregl-popup-close-button {
+  color: var(--text-muted) !important;
+  font-size: 1.125rem !important;
+  padding: 0.25rem 0.5rem !important;
+}
+
+/* Price pin markers */
+.ps-pin {
+  background: var(--surface-raised);
+  border: 1.5px solid var(--border-strong);
+  border-radius: 9999px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.12s, background-color 0.12s, border-color 0.12s;
+}
+
+.ps-pin:hover {
+  transform: scale(1.08);
+  border-color: var(--accent);
+}
+
+.ps-pin[data-selected='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+  transform: scale(1.1);
+}
+
+.ps-pin[data-cluster='true'] {
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
+  border-color: transparent;
+}
+
+/* Utility for wide content that must scroll rather than break the page. */
+.ps-scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
