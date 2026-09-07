@@ -1,4 +1,4 @@
-# ParkSpace — MVP Roadmap
+# ParkSpace: MVP Roadmap
 
 > Derived from `00_SPEC_KERNEL.md`. Where this document and the kernel disagree, the
 > kernel wins. Document number 25.
