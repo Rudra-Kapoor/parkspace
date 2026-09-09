@@ -7,6 +7,7 @@ import {
   formatMonth,
   istMonthKey,
   istMonthStart,
+  one,
   PAYOUT_STATUS_LABELS,
   labelFor,
 } from '@/lib/dashboard';
@@ -23,7 +24,7 @@ interface CompletedBooking {
   host_commission_paise: number;
   host_payout_paise: number;
   commission_rate_bp: number;
-  parking_spaces: { title: string } | null;
+  parking_spaces: { title: string } | { title: string }[] | null;
 }
 
 interface PayoutRow {
@@ -86,7 +87,7 @@ export default async function HostEarningsPage() {
         .limit(12),
     ]);
 
-    completed = (bookingsResult.data as CompletedBooking[] | null) ?? [];
+    completed = (bookingsResult.data as unknown as CompletedBooking[] | null) ?? [];
     payouts = (payoutsResult.data as PayoutRow[] | null) ?? [];
 
     const hostProfile = hostProfileResult.data as
@@ -227,7 +228,7 @@ export default async function HostEarningsPage() {
                     return (
                       <tr key={booking.id} className="border-b last:border-b-0">
                         <Td>{formatDateTime(booking.ends_at)}</Td>
-                        <Td>{booking.parking_spaces?.title ?? 'Your space'}</Td>
+                        <Td>{one(booking.parking_spaces)?.title ?? 'Your space'}</Td>
                         <Td>
                           <Link
                             href={`/bookings/${booking.id}`}
