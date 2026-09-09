@@ -12,6 +12,7 @@ import {
   labelFor,
   LISTING_STATUS_LABELS,
   LISTING_STATUS_TONES,
+  one,
   toneFor,
 } from '@/lib/dashboard';
 import { BOOKING_STATUS_LABELS } from '@/lib/types';
@@ -44,7 +45,7 @@ interface BookingRow {
   host_payout_paise: number;
   total_amount_paise: number;
   space_id: string;
-  parking_spaces: { title: string; locality: string } | null;
+  parking_spaces: { title: string; locality: string } | { title: string; locality: string }[] | null;
 }
 
 /**
@@ -106,7 +107,7 @@ export default async function HostOverviewPage() {
 
     hostProfile = (hostProfileResult.data as HostProfileRow | null) ?? null;
     spaces = (spacesResult.data as SpaceRow[] | null) ?? [];
-    windowBookings = (bookingsResult.data as BookingRow[] | null) ?? [];
+    windowBookings = (bookingsResult.data as unknown as BookingRow[] | null) ?? [];
 
     const earningsRows = (earningsResult.data as Array<{ host_payout_paise: number }> | null) ?? [];
     monthEarningsPaise = earningsRows.reduce(
@@ -388,7 +389,7 @@ function BookingLine({ booking, showDate }: { booking: BookingRow; showDate?: bo
             href={`/bookings/${booking.id}`}
             className="font-semibold hover:text-[var(--accent-text)]"
           >
-            {booking.parking_spaces?.title ?? 'Your space'}
+            {one(booking.parking_spaces)?.title ?? 'Your space'}
           </Link>
           <Badge tone={toneFor(BOOKING_STATUS_TONES, booking.status)}>
             {labelFor(BOOKING_STATUS_LABELS, booking.status)}
