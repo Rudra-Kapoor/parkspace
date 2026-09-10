@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel an in-flight run when a newer commit lands on the same branch. Reviewing
+# the results of a superseded commit wastes both minutes and attention.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        # The build must succeed without any secrets. Every page that touches the
+        # database is wrapped so an unconfigured deployment renders a setup notice
+        # rather than a stack trace, and this step is what keeps that true.
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+
+  secret-scan:
+    name: No credentials in the tree
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check that no environment file is tracked
+        run: |
+          tracked=$(git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$' || true)
+          if [ -n "$tracked" ]; then
+            echo "::error::Environment files are tracked by git:"
+            echo "$tracked"
+            exit 1
+          fi
+          echo "No tracked environment files."
+
+      - name: Scan the history for credential-shaped strings
+        run: |
+          # Provider token prefixes. This catches the common accident of pasting a
+          # real token into a file, and it checks history rather than only the
+          # working tree, because a token committed and then deleted is still
+          # published.
+          #
+          # The patterns are split so this file does not itself contain a literal
+          # that would match.
+          patterns='ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{50,}|sbp_[a-f0-9]{40}|sk-[A-Za-z0-9]{32,}|AKIA[0-9A-Z]{16}|rzp_live_[A-Za-z0-9]{14}'
+
+          if git grep -InE "$patterns" $(git rev-list --all) -- \
+               ':!*.github/workflows/*' > /tmp/hits.txt 2>/dev/null; then
+            echo "::error::Possible credentials found in the repository history:"
+            head -20 /tmp/hits.txt
+            echo ""
+            echo "A secret committed and later deleted is still published. Rotate it."
+            exit 1
+          fi
+          echo "No credential-shaped strings found."
