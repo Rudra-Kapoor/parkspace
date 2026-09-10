@@ -42,27 +42,34 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
     return NextResponse.json(new AppError('NOT_CONFIGURED').toResponseBody(), { status: 503 });
   }
 
-  const { data, error } = await supabase
-    .from('public_spaces')
-    .select('*')
-    .eq('id', parsedId.data)
-    .maybeSingle();
+  // public_spaces carries the conditional address release but no moderation
+  // state, so status comes from the base table alongside it.
+  const [viewResult, statusResult, availabilityResult] = await Promise.all([
+    supabase.from('public_spaces').select('*').eq('id', parsedId.data).maybeSingle(),
+    supabase.from('parking_spaces').select('status').eq('id', parsedId.data).maybeSingle(),
+    supabase
+      .from('availability_rules')
+      .select('id, day_of_week, start_time, end_time, ends_next_day')
+      .eq('space_id', parsedId.data)
+      .order('day_of_week'),
+  ]);
 
-  if (error) {
-    console.error('[host/spaces/:id] read failed', error.message);
+  if (viewResult.error) {
+    console.error('[host/spaces/:id] read failed', viewResult.error.message);
     return NextResponse.json(new AppError('UNKNOWN').toResponseBody(), { status: 500 });
   }
-  if (!data) {
+  if (!viewResult.data) {
     return NextResponse.json(new AppError('SPACE_NOT_FOUND').toResponseBody(), { status: 404 });
   }
 
-  const { data: availability } = await supabase
-    .from('availability_rules')
-    .select('id, day_of_week, start_time, end_time, ends_next_day')
-    .eq('space_id', parsedId.data)
-    .order('day_of_week');
-
-  return NextResponse.json({ ok: true, space: data, availability: availability ?? [] });
+  return NextResponse.json({
+    ok: true,
+    space: {
+      ...(viewResult.data as Record<string, unknown>),
+      status: (statusResult.data as { status: string } | null)?.status ?? null,
+    },
+    availability: availabilityResult.data ?? [],
+  });
 }
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
