@@ -343,5 +343,5 @@ export function dayName(index: number): string {
 }
 
 export function dayShortName(index: number): string {
-  return DAY_SHORT_NAMES[index] ?? '—';
+  return DAY_SHORT_NAMES[index] ?? 'Day';
 }
