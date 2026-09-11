@@ -33,6 +33,7 @@ export type AppErrorCode =
   | 'NOT_CHECKED_IN'
   | 'TOO_EARLY'
   | 'HOLD_EXPIRED_AND_TAKEN'
+  | 'NOT_EXTENDABLE'
   | 'NOT_AN_EXTENSION'
   | 'EXTENSION_BLOCKED'
   | 'EXTENSION_LIMIT_REACHED'
@@ -168,6 +169,11 @@ export const ERROR_CATALOGUE: Record<AppErrorCode, ErrorPresentation> = {
   HOLD_EXPIRED_AND_TAKEN: {
     message: 'Your hold ran out and the space was taken. You have not been charged.',
     action: 'Search again',
+    status: 409,
+    retryable: false,
+  },
+  NOT_EXTENDABLE: {
+    message: 'This booking cannot be extended.',
     status: 409,
     retryable: false,
   },
