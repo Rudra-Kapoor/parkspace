@@ -361,6 +361,99 @@ async function main() {
   }
 
   // ---------------------------------------------------------------------------
+  // Test 7: availability must be honest to a NON-PRIVILEGED caller.
+  //
+  // This is the regression test for the bug that shipped in migration 0008 and
+  // was only caught by calling the deployed site as a real visitor.
+  //
+  // The availability functions read the bookings table and were SECURITY
+  // INVOKER. Row Level Security hides other people's bookings, so when those
+  // functions ran as the caller they matched zero overlapping rows and reported
+  // a fully booked space as completely free.
+  //
+  // Nobody would ever have been double-booked, because the exclusion constraint
+  // is the last line and it held. But the product would have advertised parking
+  // it could not sell, and the driver would only have discovered it at the final
+  // insert. The constraint cannot protect against being wrong at the first line.
+  //
+  // Every test above this one passed while that bug was live, because they all
+  // run with the service role. That is why this test exists.
+  // ---------------------------------------------------------------------------
+  console.log(bold('\n  Test 7  availability is honest to an unprivileged caller'));
+
+  if (anonKey) {
+    const anon = createClient(url, anonKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    await cleanup();
+
+    // Occupy the only bay using the service role, so RLS hides it from anon.
+    await db.from('bookings').insert(row()).select('id');
+
+    const { data: freeToAnon, error: rpcError } = await anon.rpc('count_free_bays', {
+      p_space_id: space.id,
+      p_starts_at: startsAt,
+      p_ends_at: endsAt,
+      p_exclude_booking: null,
+    });
+
+    check(
+      'an unprivileged caller can run the availability function at all',
+      !rpcError,
+      rpcError ? rpcError.message : '',
+    );
+
+    check(
+      'a fully booked space reports zero free bays to a caller who cannot see the booking',
+      freeToAnon === 0,
+      `free_bays=${freeToAnon}, must be 0 and never look empty because of RLS`,
+    );
+
+    const { data: availableToAnon } = await anon.rpc('is_space_available', {
+      p_space_id: space.id,
+      p_starts_at: startsAt,
+      p_ends_at: endsAt,
+    });
+
+    check('and is_space_available agrees it is taken', availableToAnon === false, `got ${availableToAnon}`);
+
+    const { data: searchRows, error: searchError } = await anon.rpc('search_spaces', {
+      p_lat: 22.5726,
+      p_lng: 88.3639,
+      p_radius_m: 20000,
+      p_starts_at: null,
+      p_ends_at: null,
+      p_vehicle_type: null,
+      p_max_price_paise: null,
+      p_space_types: null,
+      p_amenities: null,
+      p_min_rating: null,
+      p_instant_only: false,
+      p_ev_only: false,
+      p_sort: 'relevance',
+      p_limit: 10,
+      p_offset: 0,
+    });
+
+    check('search runs for an unprivileged caller', !searchError, searchError ? searchError.message : '');
+    check('search returns listings', (searchRows?.length ?? 0) > 0, `rows=${searchRows?.length ?? 0}`);
+
+    const leakedInSearch = (searchRows ?? []).filter(
+      (r) => 'address_line' in r || 'lat' in r || 'access_instructions' in r,
+    );
+    check(
+      'and search still exposes no exact location field',
+      leakedInSearch.length === 0,
+      `leaked=${leakedInSearch.length}`,
+    );
+
+    await cleanup();
+  } else {
+    console.log(dim('  skipped: no anon key configured'));
+  }
+
+  // ---------------------------------------------------------------------------
   console.log(
     failed === 0
       ? green(`\n${passed} checks passed.\n`)
