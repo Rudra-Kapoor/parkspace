@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { serverEnv } from '@/lib/env';
 import type { GeocodeResult } from '@/lib/geo';
+import { callerKey, LIMITS, rateLimit, rateLimitHeaders } from '@/lib/rate-limit';
+import { AppError } from '@/lib/errors';
 
 export const runtime = 'nodejs';
 
@@ -83,13 +85,26 @@ interface NominatimItem {
 }
 
 export async function GET(request: NextRequest) {
+  // This route spends someone else's donated capacity, so it is the one that
+  // most deserves a limit.
+  const limit = rateLimit(callerKey(request), LIMITS.geocode.limit, LIMITS.geocode.windowMs);
+  if (!limit.ok) {
+    return NextResponse.json(new AppError('RATE_LIMITED').toResponseBody(), {
+      status: 429,
+      headers: rateLimitHeaders(limit),
+    });
+  }
+
   const query = request.nextUrl.searchParams.get('q')?.trim() ?? '';
 
   if (query.length < 3) {
     return NextResponse.json({ results: [] });
   }
   if (query.length > 200) {
-    return NextResponse.json({ results: [], error: 'QUERY_TOO_LONG' }, { status: 400 });
+    return NextResponse.json(
+      { ...new AppError('VALIDATION_FAILED').toResponseBody(), results: [] },
+      { status: 400 },
+    );
   }
 
   // Bias results towards the operating region. Without this, "Park Street"
@@ -137,8 +152,8 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { results: [], error: 'UPSTREAM_UNAVAILABLE' },
-        { status: 502 },
+        { ...new AppError('UPSTREAM_UNAVAILABLE').toResponseBody(), results: [] },
+        { status: 503, headers: rateLimitHeaders(limit) },
       );
     }
 
@@ -166,6 +181,9 @@ export async function GET(request: NextRequest) {
       { headers: { 'Cache-Control': 'public, max-age=3600' } },
     );
   } catch {
-    return NextResponse.json({ results: [], error: 'UPSTREAM_UNAVAILABLE' }, { status: 502 });
+    return NextResponse.json(
+      { ...new AppError('UPSTREAM_UNAVAILABLE').toResponseBody(), results: [] },
+      { status: 503, headers: rateLimitHeaders(limit) },
+    );
   }
 }
