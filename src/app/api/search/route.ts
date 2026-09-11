@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { searchParamsSchema } from '@/lib/validation';
 import { fieldErrors } from '@/lib/validation';
+import { callerKey, LIMITS, rateLimit, rateLimitHeaders } from '@/lib/rate-limit';
+import { AppError } from '@/lib/errors';
 import type { SearchResult } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -38,6 +40,18 @@ export async function GET(request: NextRequest) {
   const params = parsed.data;
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const limit = rateLimit(callerKey(request, user?.id), LIMITS.search.limit, LIMITS.search.windowMs);
+  if (!limit.ok) {
+    return NextResponse.json(new AppError('RATE_LIMITED').toResponseBody(), {
+      status: 429,
+      headers: rateLimitHeaders(limit),
+    });
+  }
+
   const { data, error } = await supabase.rpc('search_spaces', {
     p_lat: params.lat,
     p_lng: params.lng,
@@ -70,6 +84,7 @@ export async function GET(request: NextRequest) {
   void supabase
     .from('search_events')
     .insert({
+      user_id: user?.id ?? null,
       query_text: params.q ?? null,
       lat: params.lat,
       lng: params.lng,
@@ -89,11 +104,14 @@ export async function GET(request: NextRequest) {
       () => undefined, // analytics must never break a search
     );
 
-  return NextResponse.json({
+  return NextResponse.json(
+    {
     ok: true,
     results,
     total: Number(total),
     centre: { lat: params.lat, lng: params.lng },
     radius_m: params.radius_m,
-  });
+    },
+    { headers: rateLimitHeaders(limit) },
+  );
 }
