@@ -4,10 +4,15 @@
 -- Real Kolkata geography, invented hosts and listings. Safe to run repeatedly:
 -- every insert is guarded, and the whole file is idempotent on the seed marker.
 --
--- This does NOT create auth.users rows, because those belong to Supabase Auth.
--- scripts/db-seed.mjs creates the auth users first, then runs this file with the
--- generated ids substituted. Running this file alone seeds spaces owned by a
--- placeholder host so the map has content to draw.
+-- Scope: this file seeds only reference data that belongs to no user, namely the
+-- neighbourhood table behind the local SEO routes and a few demo coupons. It
+-- creates no users and no listings, because both need auth.users rows that only
+-- Supabase Auth can issue.
+--
+-- Hosts, listings, drivers and vehicles come from scripts/db-seed.mjs, which
+-- creates the auth users first and then inserts against them. Run:
+--   npm run db:push   applies migrations, then this file
+--   npm run db:seed   creates the demo accounts and listings
 -- =============================================================================
 
 begin;
