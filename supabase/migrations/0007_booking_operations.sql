@@ -486,7 +486,7 @@ as $$
 declare
   v_user uuid := auth.uid();
   b bookings%rowtype;
-  by cancelled_by_party;
+  v_by cancelled_by_party;
   calc jsonb;
   v_refund bigint;
   v_wallet_return bigint;
@@ -502,11 +502,11 @@ begin
   ) into is_admin;
 
   if v_user = b.driver_id then
-    by := 'driver';
+    v_by := 'driver';
   elsif v_user = b.host_id then
-    by := 'host';
+    v_by := 'host';
   elsif is_admin then
-    by := 'platform';
+    v_by := 'platform';
   else
     return jsonb_build_object('ok', false, 'error', 'NOT_AUTHORIZED');
   end if;
@@ -515,14 +515,14 @@ begin
     return jsonb_build_object('ok', false, 'error', 'NOT_CANCELLABLE', 'status', b.status);
   end if;
 
-  calc := compute_refund_paise(p_booking_id, by);
+  calc := compute_refund_paise(p_booking_id, v_by);
   v_refund := coalesce((calc->>'refund_paise')::bigint, 0);
   v_wallet_return := coalesce((calc->>'wallet_return_paise')::bigint, 0);
 
   update bookings
      set status = 'cancelled',
          cancelled_at = now(),
-         cancelled_by = by,
+         cancelled_by = v_by,
          cancellation_reason = p_reason,
          refund_amount_paise = v_refund,
          hold_expires_at = null
@@ -539,7 +539,7 @@ begin
   if v_refund > 0 then
     insert into refunds (payment_id, booking_id, amount_paise, policy_applied, reason, requested_by, status)
     select p.id, b.id, v_refund, b.cancellation_policy,
-           coalesce(p_reason, 'Booking cancelled by ' || by::text), v_user, 'requested'
+           coalesce(p_reason, 'Booking cancelled by ' || v_by::text), v_user, 'requested'
       from payments p
      where p.booking_id = b.id and p.status = 'captured'
      order by p.created_at desc
@@ -554,7 +554,7 @@ begin
 
   insert into booking_events (booking_id, event_type, actor_id, metadata)
   values (p_booking_id, 'cancelled', v_user,
-          jsonb_build_object('by', by, 'refund_paise', v_refund, 'calc', calc));
+          jsonb_build_object('by', v_by, 'refund_paise', v_refund, 'calc', calc));
 
   return jsonb_build_object('ok', true, 'refund_paise', v_refund,
                             'wallet_return_paise', v_wallet_return, 'calc', calc);
