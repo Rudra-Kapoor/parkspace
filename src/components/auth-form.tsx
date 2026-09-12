@@ -6,6 +6,26 @@ import { createClient } from '@/lib/supabase/client';
 import { Alert } from './ui';
 
 type Mode = 'login' | 'register';
+
+/**
+ * Only ever navigate to a same-origin relative path.
+ *
+ * The auth callback validates this for the magic-link flow, but a password
+ * sign-in never reaches the callback: it pushes straight from here. Without this
+ * the sign-in form is an open redirect, which is a phishing primitive, a genuine
+ * ParkSpace link that lands the user somewhere an attacker controls with the
+ * domain already trusted.
+ */
+function safeNext(value: string | undefined): string {
+  if (!value) return '/';
+  if (!value.startsWith('/')) return '/';
+  if (value.startsWith('//')) return '/';
+  // A backslash can be normalised to a forward slash by some browsers, turning
+  // "/\evil.com" into a protocol-relative URL.
+  if (value.includes('\\')) return '/';
+  return value;
+}
+
 type Method = 'password' | 'magic';
 
 /**
@@ -50,7 +70,7 @@ export function AuthForm({
         const { error: otpError } = await supabase.auth.signInWithOtp({
           email: email.trim(),
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext(nextPath))}`,
             shouldCreateUser: mode === 'register',
             data: mode === 'register' ? { full_name: fullName.trim() } : undefined,
           },
@@ -66,7 +86,7 @@ export function AuthForm({
           email: email.trim(),
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext(nextPath))}`,
             data: { full_name: fullName.trim() },
           },
         });
@@ -76,7 +96,7 @@ export function AuthForm({
         // settings, so check whether we actually have a session before routing.
         const { data } = await supabase.auth.getSession();
         if (data.session) {
-          router.push(nextPath);
+          router.push(safeNext(nextPath));
           router.refresh();
         } else {
           setSent(true);
@@ -90,7 +110,7 @@ export function AuthForm({
       });
       if (signInError) throw signInError;
 
-      router.push(nextPath);
+      router.push(safeNext(nextPath));
       router.refresh();
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'Something went wrong';

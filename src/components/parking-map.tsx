@@ -236,11 +236,22 @@ export function ParkingMap({
 
   return (
     <div className={className} style={{ position: 'relative' }}>
+      {/*
+        The map is hidden from assistive technology because the results list
+        beside it is the accessible equivalent. But MapLibre injects real
+        buttons for zoom, geolocate and attribution, and a focusable control
+        inside an aria-hidden subtree is a genuine defect: a keyboard user
+        lands on a button a screen reader refuses to describe.
+
+        inert removes the whole subtree from the tab order as well as from the
+        accessibility tree, which is what aria-hidden alone fails to do.
+      */}
       <div
         ref={containerRef}
         className="h-full w-full"
         aria-hidden="true"
-        role="presentation"
+        // @ts-expect-error inert is valid HTML but not yet in this React types version
+        inert=""
       />
 
       {results.length > 0 && (
