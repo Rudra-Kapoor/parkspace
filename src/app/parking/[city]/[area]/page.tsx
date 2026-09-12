@@ -6,7 +6,7 @@ import { SiteFooter } from '@/components/site-footer';
 import { SpaceCard } from '@/components/space-card';
 import { SearchHero } from '@/components/search-hero';
 import { Card, EmptyState } from '@/components/ui';
-import { createClient } from '@/lib/supabase/server';
+import { createPublicClient } from '@/lib/supabase/server';
 import { formatPaise } from '@/lib/money';
 import type { SearchResult, SeoLocality } from '@/lib/types';
 
@@ -28,7 +28,7 @@ export const revalidate = 1800;
 
 export async function generateStaticParams() {
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data } = await supabase
       .from('seo_localities')
       .select('city_slug, slug')
@@ -45,15 +45,15 @@ export async function generateStaticParams() {
 
 async function loadLocality(city: string, area: string): Promise<SeoLocality | null> {
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data } = await supabase
       .from('seo_localities')
       .select('*')
       .eq('city_slug', city)
       .eq('slug', area)
       .eq('is_published', true)
-      .maybeSingle<SeoLocality>();
-    return data;
+      .maybeSingle();
+    return (data as SeoLocality | null) ?? null;
   } catch {
     return null;
   }
@@ -94,7 +94,7 @@ export default async function LocalityPage({
   let results: SearchResult[] = [];
 
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data } = await supabase.rpc('search_spaces', {
       p_lat: locality.lat,
       p_lng: locality.lng,
