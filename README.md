@@ -190,12 +190,12 @@ Fourteen migrations, and the ordering matters.
 | `0006` | The availability engine, pricing and search |
 | `0007` | Transactional booking operations |
 | `0008` | **Row Level Security** |
-|  | The forfeit split on cancellation |
-|  | Guard triggers that were blocking every booking operation |
-|  | A host can read why their listing was rejected |
-|  | The price cap across every offered rate, and trust scoring |
-|  | Holds expire on demand, so availability never waits on cron |
-|  | **The read path, which was broken for every unprivileged user** |
+| `0009` | The forfeit split on cancellation |
+| `0010` | Guard triggers that were blocking every booking operation |
+| `0011` | A host can read why their listing was rejected |
+| `0012` | The price cap across every offered rate, and trust scoring |
+| `0013` | Holds expire on demand, so availability never waits on cron |
+| `0014` | **The read path, which was broken for every unprivileged user** |
 
 The constraint in `0004` is the one that matters:
 
