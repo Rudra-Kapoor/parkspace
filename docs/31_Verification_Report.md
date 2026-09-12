@@ -1,138 +1,160 @@
 # Verification report
 
-What was actually run against this repository, and what the results were. Recorded so
-a reader can tell the difference between what is claimed and what is checked.
+What was actually run against this project, and what the results were. Recorded so a
+reader can tell the difference between what is claimed and what is checked.
 
-Date: 12 September 2026.
+Last updated: 12 September 2026, after first deployment.
+
+## Status
+
+The application is deployed, connected to a live Postgres, and serving real data.
+
+| | |
+| --- | --- |
+| Repository | `Rudra-Kapoor/parkspace`, private |
+| Deployment | `parkspace-nine.vercel.app` |
+| Database | Supabase project `cyflmvtpsmodtcmxrcve`, region `ap-south-1` (Mumbai) |
+| Migrations applied | 14 of 14 |
+| Seeded | 5 listings, 70 bays, 5 hosts, 2 drivers, 1 admin |
 
 ## Automated checks
 
-| Check | Command | Result |
+| Suite | Command | Checks | Result |
+| --- | --- | --- | --- |
+| Unit, pure functions | `npm test` | 49 | Pass |
+| Concurrency and privacy, live database | `npm run test:concurrency` | 17 | Pass |
+| End-to-end flow, as a real driver | `npm run test:flow` | 28 | Pass |
+| Type safety | `npm run typecheck` | | Clean |
+| Production build | `npm run build` | 24 pages prerendered | Clean |
+
+94 assertions in total.
+
+## The central claim is now proven, not argued
+
+The design rests on one guarantee: two drivers cannot both be sold the same bay over
+overlapping time. Until deployment that was reasoning about Postgres semantics. It is
+now measured.
+
+`scripts/test-concurrency.mjs` fires genuinely concurrent transactions, each on its own
+connection, against the live database.
+
+| Scenario | Expected | Observed |
 | --- | --- | --- |
-| Type safety | `npx tsc --noEmit` | Clean. Zero errors across the whole repository, with `strict` and `noUncheckedIndexedAccess` enabled. |
-| Unit tests | `npx vitest run` | 49 passed, 2 files, 0 failed. |
-| Production build | `npm run build` | Compiled successfully. 75 routes. 16 static pages generated. |
-| Deployment readiness | `node scripts/deploy.mjs --check` | Runs and correctly reports missing preconditions. |
+| 24 concurrent inserts, identical interval, one bay | exactly 1 commits | 1 committed, 23 rejected with SQLSTATE 23P01 |
+| 24 staggered but overlapping intervals | exactly 1 commits | 1 committed |
+| Two bookings meeting exactly at time T | both commit | both committed |
+| 14 attempts on an 8 bay space | exactly 8 commit | 8 committed |
+| A cancelled booking | releases its bay at once | released |
 
-### What the 49 tests cover
+The third row matters as much as the first. It proves the half-open range is correct and
+the constraint is not over-eager: a booking ending at 14:00 and one starting at 14:00
+must both succeed, because the outgoing car leaves as the incoming one arrives. A
+constraint that blocked that would be quietly refusing legitimate money.
 
-`src/lib/money.test.ts`, 28 tests:
+## The location privacy rule is enforced by the database
 
-- The paise guard rejects a decimal rupee value, which is the specific bug it exists
-  for: someone passing `12.5` meaning rupees.
-- Rupee conversion rounds rather than truncates, and survives `0.1 + 0.2`.
-- Basis point arithmetic, including rejecting a fractional rate passed by mistake.
-- `splitPaise` and `splitPaiseByWeights` preserve the total exactly, verified over
-  200 random cases each.
-- `computeBreakdown` matches the documented Rs 300 example: the driver pays Rs 317.70,
-  the host receives Rs 270, the platform earns Rs 45.
-- A wallet credit does not reduce the host's payout, asserted directly.
-- Over 500 random inputs, no component goes negative and total always equals taxable
-  plus fee plus tax.
-- Indian digit grouping: 12,34,567 rather than 1,234,567.
+Asserted from an unprivileged client against the live database:
 
-`src/lib/policy.test.ts`, 21 tests:
-
-- All four cancellation policies at and around their cutoffs, against the Rs 500
-  worked example from `23_Refund_Policy.md`.
-- Host and platform cancellation refund the driver in full including the service fee,
-  under every policy.
-- The forfeit split pays the host their normal share, because they held the bay.
-- Wallet credit returns to the wallet in proportion to the cash refund, never more
-  than was applied.
-- Over 400 random combinations of amount, policy, cancelling party and timing: a
-  refund never exceeds what was paid, nothing goes negative, and every paise of a
-  forfeit is accounted for between host and platform.
-- Overstay is charged from the original end time, not from the end of grace.
-- The check-in window opens exactly 30 minutes early.
-
-## Manual smoke test
-
-A production build was started and requested over HTTP with **no database configured**,
-which is the state of a fresh clone.
-
-| Request | Result |
+| Assertion | Result |
 | --- | --- |
-| `GET /` | 200, and renders the setup notice rather than a stack trace |
-| `GET /how-it-works` | 200 |
-| `GET /help` | 200 |
-| `GET /legal/refunds` | 200 |
-| `GET /legal/host-terms` | 200, and renders the unreviewed-draft warning |
-| `GET /search?lat=22.55&lng=88.35` | 200, renders with an empty result set |
-| `GET /robots.txt` | Correct disallow list |
-| `GET /api/geocode?q=Park Street Kolkata` | 200, returned Park Street, Dharmatala, Kolkata, West Bengal 700087 from the live Nominatim service. India biasing works. |
-| `GET /api/cron` without a secret | 503, refuses to run |
+| The public view exposes no address, exact coordinate or access instructions | 5 listings read, 0 leaked |
+| An approximate coordinate is still published, so the map works | present |
+| Selecting `address_line` off the base table as an anonymous client | refused, SQLSTATE 42501 |
+| An anonymous client reading bookings | 0 rows |
+| A pending hold releases the address | no |
+| A confirmed booking more than 24 hours out releases the address | no |
+| The same listing, to a visitor with no booking, after another user books it | still hidden |
 
-## Two bugs found by review and fixed
+## Authorization boundaries, tested from the attacker's side
 
-Neither was found by running the code. Both were found by reading migration 0008
-against the operations in 0007 and 0009, and both would have surfaced the first time
-a real user touched the product.
+Signed in as a real driver against the live database:
 
-### 1. Every booking operation was blocked
+| Attempt | Result |
+| --- | --- |
+| Read another user's bookings | 0 visible |
+| Set own role to `admin` | refused, role unchanged |
+| Credit own wallet balance | refused, balance unchanged |
+| Insert a booking directly, bypassing the engine | refused |
 
-`bookings_guard_direct_update` refused any status change unless the caller was an
-admin. Its own comment claimed it detected a legitimate call "by the absence of the
-marker the RPCs set", but no marker was ever implemented.
+## Bugs found by deploying, that review had not caught
 
-`SECURITY DEFINER` changes the privileges a function runs with. It does not change
-`auth.uid()`. So inside `cancel_booking` the guard still saw an ordinary driver and
-raised `insufficient_privilege`.
+Six, and none of them were findable without a real database and a real unprivileged
+request. They are listed because the pattern is the point: each one was invisible to
+every check that came before it.
 
-Affected: `cancel_booking`, `check_in_booking`, `check_out_booking`, `confirm_booking`,
-`extend_booking`, `expire_stale_holds`, `auto_complete_stale_bookings`. In other words,
-every state transition in the product after the initial hold.
+### 1. A reserved word broke every booking operation
 
-Fixed in `0010_fix_guard_triggers.sql`. Each operation now calls
-`begin_booking_operation()`, which sets a transaction-local setting the guard honours.
-Transaction-local matters: it is discarded at commit or rollback, so it cannot leak
-into a later statement on a pooled connection. The function is revoked from every
-client role, because a marker a client could set would not be a guard.
+`by` cannot be a plpgsql variable name. `cancel_booking` declared one in three
+migrations, so migration 0007 failed outright and nothing after it applied. Found on the
+first `db:push`. Fixed by renaming to `v_by`.
 
-### 2. The service role silently lost its writes
+### 2. Search returned HTTP 500 for every visitor
 
-`profiles_guard_privileged_columns` and its siblings pin privileged columns to their
-old values unless `is_full_admin()` passes, and that function reads `auth.uid()`. The
-service role carries no `auth.uid()`, so it failed the check and every privileged write
-it made was reverted rather than rejected.
+Migration 0008 revoked `SELECT` on `parking_spaces` from the client roles, which is what
+makes the privacy rule structural. But `search_spaces` was left `SECURITY INVOKER`, so it
+executed with the caller's privileges and hit the very revoke meant to protect the table.
 
-The seed script therefore appeared to succeed while quietly failing to make anybody a
-host. A silent revert is considerably worse than a refusal, because nothing surfaces
-until someone wonders why the host dashboard is empty.
+### 3. Availability was silently wrong, which was worse
 
-Fixed in the same migration by recognising a service-role or direct database connection
-explicitly through `is_privileged_connection()`.
+`count_free_bays` and `next_free_bay` read the bookings table and were also
+`SECURITY INVOKER`. Row Level Security restricts a caller to their own bookings, so for
+any driver looking at somebody else's space the subquery matched zero rows and a fully
+booked space was reported as completely free.
 
-The parallel agent building the host dashboard independently hit the same issue and
-reported it, which is corroboration rather than coincidence.
+Nobody would ever have been double-booked, because the exclusion constraint is the last
+line and it holds. But the product would have advertised parking it could not sell, and
+the driver would have discovered it only at the final insert. **The constraint cannot
+protect against being wrong at the first line.**
 
-## One gap closed
+Every test that existed at the time passed while this bug was live, because they all ran
+with the service role. Test 7 in the concurrency suite is the regression test, and it
+asserts against an unprivileged client for exactly that reason.
 
-`0011_grant_rejection_reason.sql`. When migration 0008 revoked blanket `SELECT` on
-`parking_spaces` and granted an explicit column list instead, `rejection_reason` was
-left out by oversight. The effect was that a host whose listing was rejected could see
-the rejected badge but not the reason, which is the one piece of information that would
-let them fix it.
+### 4. The service role silently lost its writes
 
-The migration ends with an assertion that raises if any of `address_line`, `landmark`,
-`lat`, `lng`, `access_instructions` or `access_pin` ever becomes readable by the
-`authenticated` role, so the privacy grant cannot be widened by accident in future.
+The column guard triggers pin privileged columns unless `is_full_admin()` passes, and
+that reads `auth.uid()`, which the service role does not carry. Every privileged write it
+made was reverted rather than rejected, so the seed script appeared to succeed while
+quietly failing to make anybody a host. Found by review before deployment, confirmed by
+the live data afterwards: 5 hosts, 2 drivers, 1 admin, all correct.
 
-## What has NOT been verified
+### 5. The public pages could not render
+
+The landing page and the neighbourhood pages both set `revalidate` and then called the
+cookie-reading Supabase client. Reading cookies opts a page out of static rendering, so
+the combination fails at render time in Next.js 15. The neighbourhood pages returned 500.
+The landing page returned 200 and looked fine, because a try/catch swallowed the error
+and rendered it with no data at all. The silent failure was the more dangerous one.
+
+### 6. Availability depended on a scheduler
+
+Vercel's Hobby plan caps cron at once daily, which exposed a design weakness rather than
+just a platform limit. Abandoned payment holds participate in the exclusion constraint,
+so a hold kept its bay locked until the sweeper ran. On a daily schedule one driver
+closing a tab would have taken a bay out of the market for up to 24 hours.
+
+Fixed properly: `create_booking_hold` now releases expired holds on the target space
+before it books, and the availability reads ignore lapsed holds. A missed cron now costs
+tidiness, never availability.
+
+## What is still NOT verified
 
 Being explicit about this matters more than the list above.
 
-| Not verified | Why, and what it would take |
+| Not verified | What it would take |
 | --- | --- |
-| The migrations applying to a real Postgres | No database was available in this environment. `npm run db:push` has not been run end to end. The SQL is written against documented Postgres behaviour but has not been executed. |
-| The exclusion constraint under real concurrency | This is the central claim of the design and it deserves a dedicated test: N parallel transactions attempting the same bay, asserting exactly one commits. `26_Testing_Strategy.md` describes how to write it. It has not been run. |
-| Row Level Security policies in practice | The policies are written and reasoned about, but no test asserts that user A cannot read user B's booking. That test should exist before launch. |
-| The complete booking flow against live data | The flow is implemented and the build is clean, but no booking has actually been created, paid for and confirmed against a real database. |
-| Razorpay integration | Written against the documented REST API. Never called against the live service, not even in test mode. |
-| Accessibility | Built with care: focus is never hidden, the map has a full keyboard-accessible list equivalent, the star rating is radio buttons, forms are labelled. No screen reader pass and no automated audit has been run. |
-| Load and performance | The performance budgets in `09_Non_Functional_Requirements.md` are targets, not measurements. |
+| The web API routes under load | The flow test exercises the database functions directly. The HTTP routes are thin wrappers over them, but thin is not zero, and no test drives them through a browser session. |
+| Razorpay | Written against the documented REST API and never called against the live service, not even in test mode. The payment provider in this deployment is the mock. |
+| Refunds actually returning money | `cancel_booking` computes the split correctly and writes a `refunds` row. Neither provider's `refund()` is called anywhere. |
+| Payouts | Earnings accrue correctly. No payout is created and no money reaches a host. |
+| Extensions being charged | `extend_booking` adds to the booking total and creates no payment intent, so an extension is free. |
+| Overstay collection | Computed and recorded, never collected. The auto-complete sweeper also back-dates checkout to the original end, so a driver who overstays and never taps checkout is billed nothing. |
+| Notification delivery | Rows are queued with correct scheduling and deduplication. No provider is connected and nothing is sent. |
+| Accessibility | Built with care: focus is never hidden, the map has a keyboard-accessible list equivalent, the star rating is radio buttons, every form control is labelled. No screen reader pass and no automated audit has been run. |
+| Performance under load | The budgets in `09_Non_Functional_Requirements.md` are targets, not measurements. |
+| Photo upload | Schema and display path complete. No upload UI, so seeded listings have no photos. |
 
-The honest summary is that this compiles, tests clean, builds, boots and serves pages,
-and the logic that can be tested without a database is tested thoroughly. The database
-layer is carefully written and carefully reviewed, and the next step before trusting it
-is to apply it to a real Postgres and run the concurrency test.
+The honest summary: the inventory engine, the authorization model and the privacy rule
+are now tested against a real database at a real privilege level and they hold. The money
+flows inward correctly and does not yet flow back out. Nothing in the outbound half
+should be trusted until it is built and tested the same way.
