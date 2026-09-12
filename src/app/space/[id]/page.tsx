@@ -89,7 +89,10 @@ export default async function SpacePage({
       .eq('is_hidden', false)
       .order('created_at', { ascending: false })
       .limit(10),
-    supabase.from('public_profiles').select('*').eq('id', space.host_id).maybeSingle(),
+    // public_host_card rather than the public_profiles view: anon lost SELECT on
+    // that view in 0019 because it allowed bulk enumeration of every user. This
+    // function returns one host, by id, and only if they have a live listing.
+    supabase.rpc('public_host_card', { p_user_id: space.host_id }),
     supabase.auth.getUser(),
   ]);
 
@@ -114,6 +117,7 @@ export default async function SpacePage({
   const mapLng = space.exact_lng ?? space.approx_lng;
 
   const reviewList = (reviews ?? []) as Review[];
+  const hostCard = Array.isArray(host) ? host[0] : host;
 
   return (
     <>
@@ -149,7 +153,7 @@ export default async function SpacePage({
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Rating value={space.avg_rating} count={space.review_count} size="md" />
-              {host?.is_superhost && <Badge tone="accent">Superhost</Badge>}
+              {hostCard?.is_superhost && <Badge tone="accent">Superhost</Badge>}
               {space.instant_book && <Badge tone="success">Instant book</Badge>}
               {space.has_ev_charging && <Badge tone="neutral">EV charging</Badge>}
             </div>
@@ -268,21 +272,21 @@ export default async function SpacePage({
             {/* ------------------------------------------------------- */}
             {/* Host                                                     */}
             {/* ------------------------------------------------------- */}
-            {host && (
+            {hostCard && (
               <section className="mt-7 border-t pt-7">
                 <h2 className="text-lg font-semibold">Your host</h2>
                 <Card className="mt-3 flex items-center gap-4 p-5">
                   <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-base font-bold text-white">
-                    {(host.host_display_name ?? host.full_name ?? 'H').slice(0, 1).toUpperCase()}
+                    {(hostCard.host_display_name ?? hostCard.full_name ?? 'H').slice(0, 1).toUpperCase()}
                   </span>
                   <div className="min-w-0">
                     <p className="font-semibold">
-                      {host.host_display_name ?? host.full_name ?? 'Host'}
+                      {hostCard.host_display_name ?? hostCard.full_name ?? 'Host'}
                     </p>
                     <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                      {host.is_verified ? 'Identity verified' : 'Not yet verified'}
-                      {host.avg_response_minutes != null && (
-                        <> · Usually replies within {host.avg_response_minutes} min</>
+                      {hostCard.is_verified ? 'Identity verified' : 'Not yet verified'}
+                      {hostCard.avg_response_minutes != null && (
+                        <> · Usually replies within {hostCard.avg_response_minutes} min</>
                       )}
                     </p>
                   </div>
