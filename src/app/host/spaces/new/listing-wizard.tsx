@@ -688,7 +688,7 @@ interface StepProps {
 }
 
 // ---------------------------------------------------------------------------
-// Step 1 — Location
+// Step 1 - Location
 // ---------------------------------------------------------------------------
 
 function LocationStep({ state, update, errors }: StepProps) {
@@ -895,7 +895,7 @@ function LocationStep({ state, update, errors }: StepProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Step 2 — Basics
+// Step 2 - Basics
 // ---------------------------------------------------------------------------
 
 function BasicsStep({ state, update, errors }: StepProps) {
@@ -1004,7 +1004,7 @@ function BasicsStep({ state, update, errors }: StepProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Step 3 — Size and access
+// Step 3 - Size and access
 // ---------------------------------------------------------------------------
 
 function SizeStep({ state, update, errors }: StepProps) {
@@ -1122,7 +1122,7 @@ function SizeStep({ state, update, errors }: StepProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Step 4 — Amenities and rules
+// Step 4 - Amenities and rules
 // ---------------------------------------------------------------------------
 
 function AmenitiesStep({ state, update, errors }: StepProps) {
@@ -1267,7 +1267,7 @@ function AmenitiesStep({ state, update, errors }: StepProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Step 5 — Availability
+// Step 5 - Availability
 // ---------------------------------------------------------------------------
 
 function AvailabilityStep({ state, update, errors }: StepProps) {
@@ -1387,7 +1387,7 @@ function AvailabilityStep({ state, update, errors }: StepProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Step 6 — Pricing
+// Step 6 - Pricing
 // ---------------------------------------------------------------------------
 
 function PricingStep({ state, update, errors }: StepProps) {
@@ -1552,7 +1552,7 @@ function PricingStep({ state, update, errors }: StepProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Step 7 — Review
+// Step 7 - Review
 // ---------------------------------------------------------------------------
 
 function ReviewStep({ state, onJump }: { state: WizardState; onJump: (step: number) => void }) {
