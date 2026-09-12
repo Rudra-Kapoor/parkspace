@@ -41,9 +41,17 @@ export default async function SearchPage({
     // Not configured. The default Kolkata centre is still a sensible map origin.
   }
 
-  const lat = Number.parseFloat(first('lat') ?? '') || defaultCentre.lat;
-  const lng = Number.parseFloat(first('lng') ?? '') || defaultCentre.lng;
-  const radius = Number.parseInt(first('radius_m') ?? '', 10) || 1500;
+  const rawLat = Number.parseFloat(first('lat') ?? '');
+  const rawLng = Number.parseFloat(first('lng') ?? '');
+  const lat = Number.isFinite(rawLat) && rawLat >= -90 && rawLat <= 90 ? rawLat : defaultCentre.lat;
+  const lng = Number.isFinite(rawLng) && rawLng >= -180 && rawLng <= 180 ? rawLng : defaultCentre.lng;
+  // Clamped, not trusted. The API route parses through searchParamsSchema, but
+  // this page reads the query string directly, so without a bound here an
+  // unauthenticated GET could ask the database for a continent-wide sweep.
+  const rawRadius = Number.parseInt(first('radius_m') ?? '', 10);
+  const radius = Number.isFinite(rawRadius)
+    ? Math.min(Math.max(rawRadius, 100), 10_000)
+    : 1500;
   const startsAt = first('starts_at');
   const endsAt = first('ends_at');
   const query = first('q') ?? '';
