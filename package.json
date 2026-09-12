@@ -19,7 +19,8 @@
     "db:seed": "node scripts/db-seed.mjs",
     "verify": "npm run typecheck && npm run test",
     "deploy": "node scripts/deploy.mjs",
-    "test:concurrency": "node scripts/test-concurrency.mjs"
+    "test:concurrency": "node scripts/test-concurrency.mjs",
+    "test:flow": "node scripts/test-booking-flow.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
