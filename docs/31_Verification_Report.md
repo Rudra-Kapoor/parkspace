@@ -14,7 +14,7 @@ The application is deployed, connected to a live Postgres, and serving real data
 | Repository | `Rudra-Kapoor/parkspace`, private |
 | Deployment | `parkspace-nine.vercel.app` |
 | Database | Supabase project `cyflmvtpsmodtcmxrcve`, region `ap-south-1` (Mumbai) |
-| Migrations applied | 14 of 14 |
+| Migrations applied | 19 of 19 |
 | Seeded | 5 listings, 70 bays, 5 hosts, 2 drivers, 1 admin |
 
 ## Automated checks
@@ -24,10 +24,11 @@ The application is deployed, connected to a live Postgres, and serving real data
 | Unit, pure functions | `npm test` | 49 | Pass |
 | Concurrency and privacy, live database | `npm run test:concurrency` | 17 | Pass |
 | End-to-end flow, as a real driver | `npm run test:flow` | 28 | Pass |
+| Exploit regressions, as an attacker | `npm run test:exploits` | 16 | Pass, all attacks blocked |
 | Type safety | `npm run typecheck` | | Clean |
 | Production build | `npm run build` | 24 pages prerendered | Clean |
 
-94 assertions in total.
+110 assertions in total. `npm run test:live` runs the three database suites.
 
 ## The central claim is now proven, not argued
 
@@ -136,6 +137,69 @@ closing a tab would have taken a bay out of the market for up to 24 hours.
 Fixed properly: `create_booking_hold` now releases expired holds on the target space
 before it books, and the availability reads ignore lapsed holds. A missed cron now costs
 tidiness, never availability.
+
+## Adversarial audit
+
+After deployment, an eight-dimension audit ran against the live system: Row Level
+Security, SQL correctness, money, payments, secrets and configuration, input validation,
+privacy, and framework correctness. Each finding was then put to three independent
+verifiers with distinct lenses, one checking whether the code really does what the
+finding claims, one tracing whether a real actor can reach it, and one checking whether
+it is already a documented limitation. 141 agents, 53 raw findings.
+
+Everything below was confirmed against the live database before being fixed, and each
+fix is covered by a regression test.
+
+### Critical
+
+**Every revoke on a privileged function was a no-op.** Postgres grants EXECUTE on a new
+function to PUBLIC by default, and revoking from a named role does not remove a grant
+held by PUBLIC. `confirm_booking` was therefore callable by any signed-in user. It is
+SECURITY DEFINER and made no `auth.uid()` check, so a driver could place a hold, skip
+the payment screen entirely, POST their own booking id, and receive a confirmed booking.
+That also flipped `has_address_access` to true, so the same call handed them the host's
+exact address, access instructions and gate PIN. Free parking and a privacy breach
+through one endpoint. Both sweepers and three maintenance functions were equally exposed.
+
+**The booking guard was a deny-list and did not pin `space_id`.** A driver could confirm
+a cheap booking and then repoint it at any listing in the system, which released that
+host's address and gate PIN. It is now an allow-list: `driver_notes` and nothing else.
+
+**The coordinate jitter was fully invertible.** The public map offset was derived from
+the listing id by md5, and the listing id appears in every URL. Anyone could recompute
+the offset and subtract it to recover a host's exact home coordinate. Every layer above
+it held perfectly and none of it mattered, because the protected value was
+reconstructible from the unprotected one.
+
+### High
+
+| Finding | Effect |
+| --- | --- |
+| CSP omitted the tile hosts from `connect-src` | Every map rendered blank in production, with no warning |
+| Review UPDATE policy scoped rows, not columns | A host could rewrite the rating and text of a review about them |
+| Message UPDATE policy used `with check (true)` | A recipient could rewrite the body and sender of a message sent to them |
+| Host cancellation subtracted the wallet credit twice | The driver lost cash and gained credit on a cancellation that was not their fault |
+| Cancelling an unpaid hold credited the host | Real money accrued for a booking nobody ever paid for |
+| Cancelling decremented a coupon counter that was never incremented | The counter went negative, freeing redemptions for everyone |
+| A dispute moved a booking out of the exclusion constraint | The bay became resellable underneath a driver still parked in it |
+| Open redirect remained on the sign-in pages | The callback validated `next`, a password sign-in never reaches the callback |
+| Server-rendered search parsed the query string by hand | Unbounded radius, an unauthenticated database sweep |
+
+### Medium
+
+`public_profiles` was readable by anonymous clients with no row filter, exposing an
+enumerable directory of every user. Every active coupon code was publicly listable,
+including targeted campaigns. The map container was `aria-hidden` while containing
+focusable zoom and geolocate controls. There were no error or not-found boundaries
+anywhere in the app.
+
+### The pattern worth keeping
+
+Three separate bugs were invisible to every test that existed when they shipped, for the
+same reason: the tests ran with the service role, which is exempt from the thing that
+was broken. The suites now assert from an unprivileged client, and `test:exploits`
+attempts each historical attack and checks it fails. That suite also asserts the product
+still works, which caught two regressions introduced by the fixes themselves.
 
 ## What is still NOT verified
 
