@@ -1,4 +1,4 @@
-# ParkSpace — Product Requirements Document
+# ParkSpace: Product Requirements Document
 
 > Derived from `00_SPEC_KERNEL.md`. Where this document and the kernel disagree, the
 > kernel wins. Document number 02. Status: baseline for the 12 week MVP.
