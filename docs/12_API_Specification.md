@@ -472,7 +472,7 @@ Five rules, in order:
 | --- | --- | --- |
 | Signature invalid | 400 | `{"ok": false, "error": "SIGNATURE_INVALID"}` |
 | Already-seen event id | 200 | `{"ok": true, "duplicate": true}` |
-| Could not record the event | 500 | `{"ok": false}` — deliberate, this is the one case where a retry helps |
+| Could not record the event | 500 | `{"ok": false}`, deliberate: this is the one case where a retry helps |
 | Processed | 200 | `{"ok": true, "processed": true}` |
 | Recorded but processing failed | 200 | `{"ok": true, "processed": false}` |
 
