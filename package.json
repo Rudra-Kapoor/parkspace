@@ -18,7 +18,6 @@
     "db:push": "node scripts/db-push.mjs",
     "db:seed": "node scripts/db-seed.mjs",
     "verify": "npm run typecheck && npm run test",
-    "setup": "node scripts/setup.mjs",
     "deploy": "node scripts/deploy.mjs"
   },
   "dependencies": {

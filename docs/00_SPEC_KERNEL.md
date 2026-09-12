@@ -119,12 +119,20 @@ Defaults, every one of them changeable at runtime through `platform_settings`.
 | `MIN_BOOKING_MINUTES` | 30 |
 | `MAX_BOOKING_DAYS` | 90 |
 
+The last two are defaults for the listing wizard. What the booking engine actually
+enforces is the per-space `min_booking_minutes` and `max_advance_days`, because a
+global floor would override a host who legitimately wants to let a bay by the
+quarter hour.
+
 > Tax here is a placeholder, not advice. The GST treatment of a parking marketplace,
 > the TDS and TCS position under section 194-O, whether the platform is an aggregator
 > or a pure intermediary, and the invoicing obligation towards unregistered hosts all
 > have to be settled by a chartered accountant before the platform handles real money.
-> The code isolates every tax decision inside `lib/pricing/tax.ts`, so it can be
-> replaced without touching the booking engine. See `20_Legal_Requirements.md`.
+> Tax is computed in exactly two places, `quote_booking()` in migration 0007 and
+> `computeBreakdown()` in `src/lib/money.ts`, both reading `GST_PCT` from
+> `platform_settings`. Changing the rate is a settings change, not a deploy.
+> Changing the *shape* of the calculation means editing those two functions and
+> their tests. See `20_Legal_Requirements.md`.
 
 ## 8. Cancellation policies
 
@@ -156,14 +164,15 @@ Two points that the first draft left ambiguous, now settled:
                   │
 draft ─► pending ─┼──────────► cancelled      driver or host, before start
                   │
-                  └─► confirmed ─► active ─► completed ─► reviewed
-                           │          │
-                           │          └────► disputed
+                  └─► confirmed ─► active ─► completed
+                           │          │          │
+                           │          └──────────┴──► disputed
                            └────► no_show
 ```
 
 Legal transitions are enforced by a database trigger, not only in application code.
-See `14_Booking_Engine_Specification.md`.
+There is no separate `reviewed` state: a review is a row in `reviews`, and the
+booking stays `completed`. See `14_Booking_Engine_Specification.md`.
 
 ## 10. Location privacy rule
 

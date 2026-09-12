@@ -93,7 +93,15 @@ export async function GET(request: NextRequest) {
     outcome.superhosts_refreshed = `error: ${String(error)}`;
   }
 
-  // 5. Mark due notifications as sent.
+  // 5. Recompute the rolling 90 day host cancellation window.
+  try {
+    const { data, error } = await service.rpc('refresh_host_cancellation_windows');
+    outcome.cancellation_windows = error ? `error: ${error.message}` : data;
+  } catch (error) {
+    outcome.cancellation_windows = `error: ${String(error)}`;
+  }
+
+  // 6. Mark due notifications as sent.
   //
   // In this build that is all it does: there is no email or SMS provider wired
   // up, and pretending otherwise would be worse than being explicit. The rows
@@ -112,7 +120,7 @@ export async function GET(request: NextRequest) {
     outcome.notifications_dispatched = `error: ${String(error)}`;
   }
 
-  // 6. Release host earnings that have cleared the payout delay.
+  // 7. Release host earnings that have cleared the payout delay.
   try {
     const { data: setting } = await service
       .from('platform_settings')

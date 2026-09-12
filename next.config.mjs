@@ -10,15 +10,20 @@ const csp = [
   "default-src 'self'",
   // Next.js injects inline bootstrap scripts; 'unsafe-inline' is required for those.
   // MapLibre compiles its style expressions with new Function(), hence 'unsafe-eval'.
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  // Razorpay's checkout sheet is injected on demand at payment time. Without
+  // this entry the real gateway silently fails to load and the driver sees a
+  // dead Pay button.
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com",
   "style-src 'self' 'unsafe-inline'",
   // OSM raster tiles, Supabase Storage renders, and data/blob URIs for QR codes.
   "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://*.supabase.co",
   "font-src 'self' data:",
   // Supabase REST/Realtime, the OSRM routing demo server, and Nominatim (server side
   // only, but listed for completeness when running the dev proxy).
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://router.project-osrm.org https://nominatim.openstreetmap.org",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://router.project-osrm.org https://nominatim.openstreetmap.org https://api.razorpay.com https://lumberjack.razorpay.com",
   "worker-src 'self' blob:",
+  // The checkout sheet renders in an iframe of its own.
+  "frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

@@ -260,16 +260,28 @@ webhook at `/api/payments/webhook` for `payment.captured`, `payment.failed` and
 
 Being straight about this matters more than looking complete.
 
+**Money leaves the system in one direction only.** Payments in work end to end. Nothing
+that pays money out is connected, and these three gaps are related:
+
+| Gap | What actually happens |
+| --- | --- |
+| Refunds | `cancel_booking` computes the split correctly and writes a `refunds` row at `requested`. Neither provider's `refund()` is ever called, so no money returns. A human would have to refund from the gateway dashboard and mark the row. |
+| Payouts | `payable_balance_paise` only ever increases. The cron counts payable bookings and stops there. No payout is created and no money reaches a host. |
+| Extensions | `extend_booking` adds the extra time to the booking total but creates no payment intent, so an extension is currently free to the driver. |
+| Overstay | Charged and recorded on checkout. Never collected. And the auto-complete sweeper back-dates `checked_out_at` to the original end, so a driver who overstays and never taps checkout is billed nothing at all. |
+
+Everything else:
+
 | Area | State |
 | --- | --- |
 | Notification delivery | Rows are queued with correct scheduling and deduplication. Nothing is actually sent. No email, SMS, push or WhatsApp provider is wired up. |
 | Photo upload | The schema and display path are complete. The upload UI is not built, so seeded listings have no photos. |
-| Host payouts | Earnings are computed and tracked correctly. No money moves. |
 | KYC document upload | The table and policies exist. The upload flow is not built. |
 | Rate limiting | In-process and per-instance, so on serverless the real limit is the configured limit times the number of warm instances. Fine against a loop, useless against a distributed attack. |
 | Realtime | Checkout polls for confirmation rather than subscribing. Simpler and adds no failure mode. |
 | Legal documents | Drafts for a lawyer to settle, carrying 96 REVIEW REQUIRED markers. Not publishable as they stand. |
-| Tax treatment | An 18 percent placeholder isolated in one module. A chartered accountant has to settle the real position before this handles real money. |
+| Tax treatment | An 18 percent placeholder read from `platform_settings`, applied in two places. A chartered accountant has to settle the real position before this handles real money. |
+| Concurrency proof | The exclusion constraint is the central claim of the design and no test yet fires parallel transactions at one bay. Write that test first. |
 
 ---
 
