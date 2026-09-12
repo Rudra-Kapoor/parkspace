@@ -7,6 +7,11 @@ Built on a free tier from top to bottom: Next.js on Vercel, Supabase Postgres,
 MapLibre with OpenStreetMap tiles, and a payment layer that runs the complete booking
 loop with no merchant account.
 
+**Live:** https://parkspace-nine.vercel.app
+
+94 assertions pass against the live database, including the one that matters: 24
+concurrent transactions aimed at a single parking bay, exactly one of which commits.
+
 ---
 
 ## The idea in one paragraph
@@ -97,7 +102,7 @@ SUPABASE_ACCESS_TOKEN=sbp_your_token npm run db:push
 $env:SUPABASE_ACCESS_TOKEN="sbp_your_token"; npm run db:push
 ```
 
-This applies all nine migrations through the Supabase Management API. No Docker, no
+This applies all fourteen migrations through the Supabase Management API. No Docker, no
 local Postgres, no CLI install. It is safe to run twice: applied files are skipped.
 
 ### 5. Add demo data
@@ -165,15 +170,15 @@ src/
     payments/                   provider abstraction, mock and Razorpay
     supabase/                   request-scoped and service-role clients
 supabase/
-  migrations/                   0001 to 0009, applied in order
+  migrations/                   0001 to 0014, applied in order
   seed/                         reference localities and coupons
-docs/                           30 specification documents
+docs/                           32 specification documents
 scripts/                        setup and deployment tooling
 ```
 
 ### The database is the product
 
-Nine migrations, and the ordering matters.
+Fourteen migrations, and the ordering matters.
 
 | File | What it establishes |
 | --- | --- |
@@ -185,7 +190,12 @@ Nine migrations, and the ordering matters.
 | `0006` | The availability engine, pricing and search |
 | `0007` | Transactional booking operations |
 | `0008` | **Row Level Security** |
-| `0009` | The forfeit split on cancellation |
+|  | The forfeit split on cancellation |
+|  | Guard triggers that were blocking every booking operation |
+|  | A host can read why their listing was rejected |
+|  | The price cap across every offered rate, and trust scoring |
+|  | Holds expire on demand, so availability never waits on cron |
+|  | **The read path, which was broken for every unprivileged user** |
 
 The constraint in `0004` is the one that matters:
 
@@ -206,14 +216,25 @@ arrives.
 
 ## Tests
 
+Three suites, 94 assertions.
+
 ```bash
-npm test
+npm test               # 49 unit tests, pure functions, no database
+npm run test:concurrency  # 17 checks against a live Postgres
+npm run test:flow         # 28 checks as a real signed-in driver
 ```
 
-49 tests covering the two things that must never be wrong: the money and the
-cancellation policy. They include randomised invariant checks, 400 combinations of
-amount, policy, cancelling party and timing, asserting that a refund never exceeds what
-was paid and that every paise of a forfeit is accounted for.
+The unit tests cover the two things that must never be wrong, the money and the
+cancellation policy, including randomised invariant checks over 400 combinations of
+amount, policy, cancelling party and timing.
+
+The other two need a database, and they exist because the most serious bug in this
+project so far was invisible to anything that ran with elevated privileges. The
+concurrency suite proves the exclusion constraint holds under real parallelism and that
+the privacy grant holds for an anonymous client. The flow suite signs in as a seeded
+driver and drives search, quote, hold, confirm and cancel at the privilege level a real
+user has, then tries to escalate its own role, credit its own wallet and insert a
+booking directly. All three are refused.
 
 ```bash
 npm run typecheck     # tsc --noEmit
@@ -281,13 +302,13 @@ Everything else:
 | Realtime | Checkout polls for confirmation rather than subscribing. Simpler and adds no failure mode. |
 | Legal documents | Drafts for a lawyer to settle, carrying 96 REVIEW REQUIRED markers. Not publishable as they stand. |
 | Tax treatment | An 18 percent placeholder read from `platform_settings`, applied in two places. A chartered accountant has to settle the real position before this handles real money. |
-| Concurrency proof | The exclusion constraint is the central claim of the design and no test yet fires parallel transactions at one bay. Write that test first. |
+| Concurrency proof | Done. 24 parallel transactions at one bay, exactly one commits. Run `npm run test:concurrency`. |
 
 ---
 
 ## The documents
 
-Thirty specifications in [`docs/`](docs/), around 80,000 words.
+Thirty-two specifications in [`docs/`](docs/), around 130,000 words.
 
 [`00_SPEC_KERNEL.md`](docs/00_SPEC_KERNEL.md) is the single source of truth: if a
 document and the kernel disagree, the kernel wins.
