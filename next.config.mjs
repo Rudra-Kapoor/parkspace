@@ -20,7 +20,10 @@ const csp = [
   "font-src 'self' data:",
   // Supabase REST/Realtime, the OSRM routing demo server, and Nominatim (server side
   // only, but listed for completeness when running the dev proxy).
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://router.project-osrm.org https://nominatim.openstreetmap.org https://api.razorpay.com https://lumberjack.razorpay.com",
+    // MapLibre fetches raster tiles through XHR rather than <img>, so the tile
+  // hosts have to appear in connect-src as well as img-src. Omitting them here
+  // does not warn: every map simply renders blank.
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://router.project-osrm.org https://nominatim.openstreetmap.org https://api.razorpay.com https://lumberjack.razorpay.com",
   "worker-src 'self' blob:",
   // The checkout sheet renders in an iframe of its own.
   "frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com",
