@@ -20,7 +20,9 @@
     "verify": "npm run typecheck && npm run test",
     "deploy": "node scripts/deploy.mjs",
     "test:concurrency": "node scripts/test-concurrency.mjs",
-    "test:flow": "node scripts/test-booking-flow.mjs"
+    "test:flow": "node scripts/test-booking-flow.mjs",
+    "test:exploits": "node scripts/test-exploits.mjs",
+    "test:live": "npm run test:concurrency && npm run test:flow && npm run test:exploits"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
