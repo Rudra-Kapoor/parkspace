@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { formatPaise } from '@/lib/money';
 import { formatDistance, formatWalk } from '@/lib/geo';
@@ -7,6 +9,12 @@ import { AmenityIcon, Badge, Rating, cn } from './ui';
 
 /**
  * A search result.
+ *
+ * A client component because it carries hover and focus handlers that keep it in
+ * step with the map. It is rendered from server components too, on the
+ * neighbourhood pages, where those handlers are simply not passed. Without the
+ * directive those pages fail to prerender: a server component may not hold an
+ * event handler at all, even an unused one.
  *
  * The price shown depends on whether the driver told us when they are coming.
  * With times, we show the actual quoted total for their window, which is the
