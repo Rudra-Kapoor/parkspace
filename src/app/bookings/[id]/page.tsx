@@ -7,6 +7,7 @@ import { SiteFooter } from '@/components/site-footer';
 import { Alert, Badge, Card } from '@/components/ui';
 import { StaticMap } from '@/components/static-map';
 import { BookingActions } from '@/components/booking-actions';
+import { BookingThread } from '@/components/booking-thread';
 import { createClient } from '@/lib/supabase/server';
 import { formatPaise } from '@/lib/money';
 import { directionsUrl } from '@/lib/geo';
@@ -338,6 +339,18 @@ export default async function BookingDetailPage({
           refundPreview={refundPreview}
           cancellationCopy={CANCELLATION_POLICY_COPY[booking.cancellation_policy]}
         />
+
+        {/* ------------------------------------------------------------- */}
+        {/* Conversation and problem reporting                             */}
+        {/* ------------------------------------------------------------- */}
+        {booking.status !== 'expired' && booking.status !== 'pending' && (
+          <BookingThread
+            bookingId={booking.id}
+            currentUserId={user.id}
+            counterpartyName={isHost ? 'the driver' : 'your host'}
+            canDispute={['confirmed', 'active', 'completed', 'no_show'].includes(booking.status)}
+          />
+        )}
 
         {/* ------------------------------------------------------------- */}
         {/* Receipt                                                        */}

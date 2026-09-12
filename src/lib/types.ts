@@ -516,3 +516,18 @@ export const AMENITY_LABELS: Record<string, string> = {
   power_backup: 'Power backup',
   attendant: 'Attendant on site',
 };
+
+export const DISPUTE_CATEGORY_LABELS: Record<DisputeCategory, string> = {
+  space_unavailable: 'The space was not available',
+  access_failure: 'I could not get in',
+  wrong_location: 'The location was wrong',
+  space_too_small: 'My vehicle did not fit',
+  vehicle_blocked: 'My vehicle was blocked in',
+  unsafe_location: 'The place felt unsafe',
+  overcharged: 'I was charged the wrong amount',
+  vehicle_damage: 'My vehicle was damaged',
+  property_damage: 'The space was damaged',
+  host_no_show: 'The host did not turn up',
+  driver_no_show: 'The driver did not turn up',
+  other: 'Something else',
+};
