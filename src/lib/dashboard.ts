@@ -129,6 +129,20 @@ export function minutesBetween(startsAt: string, endsAt: string): number {
   return Math.max(0, Math.round((end.getTime() - start.getTime()) / 60_000));
 }
 
+/**
+ * The bucket key for an IST calendar month.
+ *
+ * Computed by shifting the instant into IST wall time and then reading the UTC
+ * fields of the shifted value, so a stay that ended at 2 am IST on the first of
+ * the month lands in that month rather than the previous one.
+ */
+export function istMonthKey(value: string | Date): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return 'invalid';
+  const shifted = new Date(date.getTime() + IST_OFFSET_MINUTES * 60_000);
+  return `${shifted.getUTCFullYear()}-${shifted.getUTCMonth()}`;
+}
+
 /** The YYYY-MM-DD key an IST calendar cell is addressed by. */
 export function istDateKey(value: Date): string {
   const shifted = new Date(value.getTime() + IST_OFFSET_MINUTES * 60_000);
