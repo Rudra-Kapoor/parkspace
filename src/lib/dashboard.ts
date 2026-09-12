@@ -284,6 +284,20 @@ export function toneFor(
   return found ?? 'neutral';
 }
 
+/**
+ * Normalise a PostgREST embedded relation.
+ *
+ * An embedded many-to-one comes back as a single object, but the client's type
+ * inference cannot tell a many-to-one from a one-to-many and describes both as
+ * an array. Rather than lie to the type system in a dozen places, every read of
+ * an embedded parent goes through here and copes with either shape.
+ */
+export function one<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null;
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value;
+}
+
 // ---------------------------------------------------------------------------
 // Units
 // ---------------------------------------------------------------------------

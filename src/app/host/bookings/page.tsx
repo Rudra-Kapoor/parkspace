@@ -10,6 +10,7 @@ import {
   istDayStart,
   labelFor,
   minutesBetween,
+  one,
   toneFor,
 } from '@/lib/dashboard';
 import { BOOKING_STATUS_LABELS, VEHICLE_TYPE_LABELS } from '@/lib/types';
@@ -38,8 +39,8 @@ interface BookingRow {
   host_payout_paise: number;
   total_amount_paise: number;
   driver_notes: string | null;
-  parking_spaces: { title: string; locality: string } | null;
-  vehicles: VehicleEmbed | null;
+  parking_spaces: { title: string; locality: string } | { title: string; locality: string }[] | null;
+  vehicles: VehicleEmbed | VehicleEmbed[] | null;
 }
 
 /**
@@ -72,7 +73,7 @@ export default async function HostBookingsPage() {
       .limit(200);
 
     if (error) throw new Error(error.message);
-    bookings = (data as BookingRow[] | null) ?? [];
+    bookings = (data as unknown as BookingRow[] | null) ?? [];
 
     const driverIds = Array.from(new Set(bookings.map((booking) => booking.driver_id)));
     if (driverIds.length > 0) {
@@ -208,7 +209,7 @@ function BookingCard({
   driverName: string;
   showTimeOnly?: boolean;
 }) {
-  const vehicle = booking.vehicles;
+  const vehicle = one(booking.vehicles);
   const descriptors = [vehicle?.colour, vehicle?.make, vehicle?.model].filter(Boolean).join(' ');
   const duration = formatDuration(minutesBetween(booking.starts_at, booking.ends_at));
   const liveish = ['pending', 'confirmed', 'active'].includes(booking.status);
@@ -222,7 +223,7 @@ function BookingCard({
               href={`/bookings/${booking.id}`}
               className="font-semibold hover:text-[var(--accent-text)]"
             >
-              {booking.parking_spaces?.title ?? 'Your space'}
+              {one(booking.parking_spaces)?.title ?? 'Your space'}
             </Link>
             <Badge tone={toneFor(BOOKING_STATUS_TONES, booking.status)}>
               {labelFor(BOOKING_STATUS_LABELS, booking.status)}
