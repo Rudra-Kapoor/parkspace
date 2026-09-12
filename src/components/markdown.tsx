@@ -544,7 +544,10 @@ function renderBlocks(blocks: Block[], keyPrefix: string): ReactNode[] {
 
       case 'list': {
         const itemNodes = block.items.map((item, itemPosition) => (
-          <li key={`${key}-i${itemPosition}`} className="leading-7">
+          <li
+            key={`${key}-i${itemPosition}`}
+            className="leading-7 [&>p]:my-2 [&>p:first-child]:mt-0 [&>p:last-child]:mb-0"
+          >
             {renderListItem(item, `${key}-i${itemPosition}`)}
           </li>
         ));

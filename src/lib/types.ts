@@ -312,6 +312,7 @@ export interface Booking {
   checkin_distance_m: number | null;
   overstay_minutes: number;
   overstay_amount_paise: number;
+  overstay_settled: boolean;
   extension_count: number;
   cancelled_at: string | null;
   cancelled_by: CancelledByParty | null;
