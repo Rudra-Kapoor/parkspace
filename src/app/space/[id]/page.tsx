@@ -8,6 +8,7 @@ import { BookingPanel } from '@/components/booking-panel';
 import { StaticMap } from '@/components/static-map';
 import { createClient } from '@/lib/supabase/server';
 import { formatPaise } from '@/lib/money';
+import { photoUrl } from '@/lib/storage';
 import {
   AMENITY_LABELS,
   CANCELLATION_POLICY_COPY,
@@ -388,7 +389,19 @@ function PhotoGallery({
     );
   }
 
-  const [lead, ...rest] = photos;
+  const usable = photos
+    .map((photo) => ({ ...photo, url: photoUrl(photo.storage_path) }))
+    .filter((photo): photo is typeof photo & { url: string } => photo.url !== null);
+
+  if (usable.length === 0) {
+    return (
+      <div className="flex h-56 items-center justify-center rounded-xl border border-dashed bg-[var(--surface-sunken)] text-sm text-[var(--text-muted)] sm:h-72">
+        No photos yet for this space
+      </div>
+    );
+  }
+
+  const [lead, ...rest] = usable;
 
   return (
     <div className="grid gap-2 overflow-hidden rounded-xl sm:h-80 sm:grid-cols-4 sm:grid-rows-2">
@@ -396,7 +409,7 @@ function PhotoGallery({
         <figure className="relative sm:col-span-2 sm:row-span-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={lead.storage_path}
+            src={lead.url}
             alt={lead.caption ?? `${title}, main photo`}
             className="h-56 w-full object-cover sm:h-full"
           />
@@ -406,7 +419,7 @@ function PhotoGallery({
         <figure key={photo.id} className="relative hidden sm:block">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={photo.storage_path}
+            src={photo.url}
             alt={photo.caption ?? ''}
             loading="lazy"
             className="h-full w-full object-cover"

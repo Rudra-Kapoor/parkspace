@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { formatPaise } from '@/lib/money';
 import { formatDistance, formatWalk } from '@/lib/geo';
+import { photoUrl } from '@/lib/storage';
 import { SPACE_TYPE_LABELS, AMENITY_LABELS, type SearchResult } from '@/lib/types';
 import { AmenityIcon, Badge, Rating, cn } from './ui';
 
@@ -41,6 +42,7 @@ export function SpaceCard({
           : { amount: 'Ask', caption: '' };
 
   const topAmenities = result.amenities.slice(0, 3);
+  const photo = photoUrl(result.primary_photo);
 
   return (
     <article
@@ -56,10 +58,10 @@ export function SpaceCard({
       <div className="flex gap-0">
         {showPhoto && (
           <div className="relative hidden w-36 shrink-0 bg-[var(--surface-sunken)] sm:block">
-            {result.primary_photo ? (
+            {photo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={result.primary_photo}
+                src={photo}
                 alt=""
                 loading="lazy"
                 className="h-full w-full object-cover"
