@@ -128,15 +128,26 @@ Defaults, every one of them changeable at runtime through `platform_settings`.
 
 ## 8. Cancellation policies
 
-| Policy | Rule |
-| --- | --- |
-| `flexible` | Full refund up to 1 hour before start. |
-| `moderate` | Full refund up to 24 hours before start, half after that. |
-| `strict` | Half up to 48 hours before start, nothing after. |
-| `non_refundable` | Nothing once confirmed. Monthly and event inventory only. |
+| Policy | Cancel before the cutoff | Cancel after the cutoff |
+| --- | --- | --- |
+| `flexible` | Full refund, cutoff is 1 hour before start | Nothing |
+| `moderate` | Full refund, cutoff is 24 hours before start | Half |
+| `strict` | Half, cutoff is 48 hours before start | Nothing |
+| `non_refundable` | Nothing once confirmed. Monthly and event inventory only. | Nothing |
 
 The service fee is retained when the driver cancels and refunded when the host cancels.
 A host cancellation also applies a reliability penalty.
+
+Two points that the first draft left ambiguous, now settled:
+
+1. **`flexible` after its cutoff refunds nothing.** It is the most generous policy
+   before the cutoff and the strictest after it, deliberately. A space released an
+   hour before the stay can still be resold. One released ten minutes before cannot.
+2. **Commission is charged only on the amount the host actually keeps.** When a
+   driver forfeits part of a booking under a cancellation policy, the platform takes
+   its percentage of the forfeited amount and the host keeps the rest, on the same
+   split as a completed stay. The platform does not take a full commission on a
+   booking that was never delivered, and the host is not paid gross on one either.
 
 ## 9. Booking state machine
 
