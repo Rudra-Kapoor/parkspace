@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { createClient } from '@/lib/supabase/server';
+import { createPublicClient } from '@/lib/supabase/server';
 
 export const revalidate = 3600;
 
@@ -27,7 +27,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
 
     const [{ data: localities }, { data: spaces }] = await Promise.all([
       supabase.from('seo_localities').select('city_slug, slug').eq('is_published', true),

@@ -33,6 +33,33 @@ export async function createClient() {
 }
 
 /**
+ * A cookie-free client for public, cacheable pages.
+ *
+ * The request-scoped client above reads cookies, and reading cookies opts a page
+ * out of static rendering. A page that sets `revalidate` and then calls it fails
+ * at render time in Next.js 15, which is how the landing page and the
+ * neighbourhood pages broke: the landing page swallowed the error in a try/catch
+ * and quietly rendered without data, and the neighbourhood pages returned 500.
+ *
+ * This client holds the anon key and no session, so it sees exactly what a
+ * signed-out visitor sees. That is precisely right for pages whose content is
+ * the same for everybody, and it lets them stay cached.
+ *
+ * Never use it for anything user-specific. It has no session, so every RLS
+ * policy that depends on auth.uid() will correctly return nothing.
+ */
+export function createPublicClient() {
+  const env = publicEnv();
+
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { createClient: createSupabaseClient } = require('@supabase/supabase-js');
+
+  return createSupabaseClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
+/**
  * The service-role client. Bypasses every RLS policy.
  *
  * Legitimate uses are narrow and all of them are server-side infrastructure:

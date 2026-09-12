@@ -4,7 +4,7 @@ import { SiteFooter } from '@/components/site-footer';
 import { Alert, Card } from '@/components/ui';
 import { SearchHero } from '@/components/search-hero';
 import { isConfigured } from '@/lib/env';
-import { createClient } from '@/lib/supabase/server';
+import { createPublicClient } from '@/lib/supabase/server';
 import { formatPaise } from '@/lib/money';
 
 export const revalidate = 300;
@@ -24,7 +24,7 @@ export default async function HomePage() {
 
   if (configured) {
     try {
-      const supabase = await createClient();
+      const supabase = createPublicClient();
 
       const [{ data: localityRows }, { count }, { data: cheapest }] = await Promise.all([
         supabase
