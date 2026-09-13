@@ -42,7 +42,9 @@ async function loadDotEnv() {
   }
 }
 
-const DEMO_PASSWORD = 'parkspace-demo-2026';
+// Read lazily: .env.local is only loaded inside main(), and a deployed database
+// has its demo password rotated away from the seed default.
+const demoPassword = () => process.env.DEMO_PASSWORD ?? 'parkspace-demo-2026';
 
 /** Real Kolkata coordinates, invented hosts and listings. */
 const HOSTS = [
@@ -265,7 +267,7 @@ then run npm run db:seed again.
   async function ensureUser(email, name) {
     const { data: created, error } = await supabase.auth.admin.createUser({
       email,
-      password: DEMO_PASSWORD,
+      password: demoPassword(),
       email_confirm: true,
       user_metadata: { full_name: name },
     });
@@ -403,7 +405,7 @@ Seed complete. ${spaceCount} new listing${spaceCount === 1 ? '' : 's'} created.
 
 Sign in with any of these. The password is the same for all of them:
 
-  Password:  ${DEMO_PASSWORD}
+  Password:  ${demoPassword()}
 
   Driver     arindam.driver@parkspace.demo
   Driver     debjani.driver@parkspace.demo

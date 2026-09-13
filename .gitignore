@@ -62,3 +62,6 @@ desktop.ini
 
 # Claude Code local settings, machine-specific
 .claude/
+
+# Live demo credentials, never commit
+*.local.md

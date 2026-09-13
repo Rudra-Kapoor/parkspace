@@ -20,7 +20,9 @@ import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 
 const ROOT = process.cwd();
-const DEMO_PASSWORD = 'parkspace-demo-2026';
+// Read lazily: .env.local is only loaded inside main(), and a deployed database
+// has its demo password rotated away from the seed default.
+const demoPassword = () => process.env.DEMO_PASSWORD ?? 'parkspace-demo-2026';
 const DRIVER_EMAIL = 'arindam.driver@parkspace.demo';
 
 async function loadDotEnv() {
@@ -85,7 +87,7 @@ async function main() {
 
   const { data: session, error: signInError } = await driver.auth.signInWithPassword({
     email: DRIVER_EMAIL,
-    password: DEMO_PASSWORD,
+    password: demoPassword(),
   });
 
   check('a seeded driver can sign in with a password', !signInError && Boolean(session?.user), signInError?.message ?? '');
